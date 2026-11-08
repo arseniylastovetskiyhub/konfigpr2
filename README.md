@@ -12,7 +12,9 @@ my-shell/
 │   └── main.py                    # Главный файл
 ├── tests/
 │   ├── __init__.py                # Делает папку tests модулем Python
-│   ├── test_main.bat  		   # Тест
+│   ├── test_main.bat  		    # Тест
+│   ├── test_maven.py              # Тесты парсера Maven
+│   └── sample.pom                 # Тестовый POM-файл
 ├── run.bat                        # Скрипт запуска для Windows
 ├── README.md                      # Документация проекта
 └── .gitignore                     # Список файлов, игнорируемых Git
@@ -20,10 +22,10 @@ my-shell/
 
 ## Запуск
 
-Запуск делается через:
+Запуск делается через комнадную строку при помощи команды:
 
 ```text
-run.bat.
+run.bat --package "groupId:artifactId[:version]" --repo "https://repo1.maven.org/maven2"
 ```
 
 ## Параметры

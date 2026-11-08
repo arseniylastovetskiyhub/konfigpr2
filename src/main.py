@@ -67,18 +67,20 @@ def build_parser():
     """Создаёт парсер аргументов командной строки."""
     parser = argparse.ArgumentParser(
         description="Визуализация графа "
-                    "зависимостей "
-                    "(вариант 18, этап 1)"
+                    "зависимостей Maven "
+                    "(вариант 18, этап 2)"
     )
     parser.add_argument(
         "--package",
         default=None,
-        help="Имя анализируемого пакета"
+        help="Имя пакета в формате "
+             "'groupId:artifactId[:version]'"
     )
     parser.add_argument(
         "--repo",
         default=None,
-        help="URL репозитория или путь к файлу"
+        help="URL репозитория или путь к "
+             "POM-файлу"
     )
     parser.add_argument(
         "--test-mode",
@@ -116,8 +118,39 @@ def print_config(args):
     print(f"filter: {args.filter}")
 
 
+def print_dependencies(deps, version, filter_str):
+    """
+    Выводит список зависимостей на экран.
+    :param deps: Список зависимостей.
+    :param version: Версия анализируемого пакета.
+    :param filter_str: Подстрока для фильтрации.
+    """
+    print(f"\nПрямые зависимости пакета "
+          f"(версия {version}):")
+    filtered = deps
+    if filter_str:
+        filtered = [
+            d for d in deps
+            if filter_str in d.get("artifactId", "")
+        ]
+    if not filtered:
+        print("  (зависимости не найдены)")
+        return
+    for dep in filtered:
+        group = dep.get("groupId", "?")
+        artifact = dep.get("artifactId", "?")
+        ver = dep.get("version", "?")
+        scope = dep.get("scope", "compile")
+        print(f"  - {group}:{artifact}:{ver} "
+              f"[{scope}]")
+
+
 def main():
-    """Основная функция, запускающая приложение."""
+    """
+    Точка входа в приложение.
+    Парсит аргументы, валидирует, собирает
+    данные и выводит зависимости.
+    """
     parser = build_parser()
     args = parser.parse_args()
     errors = []
@@ -127,6 +160,22 @@ def main():
             print(err, file=sys.stderr)
         sys.exit(1)
     print_config(args)
+
+    try:
+        from maven import get_dependencies
+        deps, version = get_dependencies(
+            args.repo,
+            args.package,
+            args.test_mode
+        )
+        print_dependencies(
+            deps, version, args.filter
+        )
+    except ValueError as e:
+        print(f"Ошибка: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    print("\nЭтап 2 успешно завершён.")
 
 
 if __name__ == "__main__":
