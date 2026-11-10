@@ -5,11 +5,12 @@
 import os
 import urllib.request
 import urllib.error
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as element_tree
 
 
 MAVEN_POM_NS = "{http://maven.apache.org/POM/4.0.0}"
-
+MIN_PARTS = 2
+MAX_PARTS = 3
 
 def parse_package_name(package):
     """
@@ -18,14 +19,14 @@ def parse_package_name(package):
     :return: Кортеж (group_id, artifact_id, version).
     """
     parts = package.split(":")
-    if len(parts) < 2 or len(parts) > 3:
+    if len(parts) < MIN_PARTS or len(parts) > MAX_PARTS:
         raise ValueError(
             "Неверный формат пакета. "
             "Ожидается 'groupId:artifactId[:version]'."
         )
     group_id = parts[0]
     artifact_id = parts[1]
-    version = parts[2] if len(parts) == 3 else None
+    version = parts[MAX_PARTS - 1] if len(parts) == MAX_PARTS else None
     return group_id, artifact_id, version
 
 
@@ -100,7 +101,7 @@ def get_latest_version(repo, group_id, artifact_id):
     """
     url = build_metadata_url(repo, group_id, artifact_id)
     content = fetch_url(url)
-    root = ET.fromstring(content)
+    root = element_tree.fromstring(content)
     versioning = root.find("versioning")
     if versioning is None:
         raise ValueError(
@@ -169,6 +170,31 @@ def _resolve_property(value, props):
         return props.get(name, match.group(0))
     return re.sub(r"\$\{([^}]+)\}", replacer, value)
 
+def _parse_one_dep(dep, ns, props):
+    """
+    Парсит одну зависимость из XML.
+    :param dep: Элемент dependency.
+    :param ns: Namespace Maven.
+    :param props: Словарь свойств.
+    :return: Словарь или None.
+    """
+    group = dep.find(f"{ns}groupId")
+    artifact = dep.find(f"{ns}artifactId")
+    if group is None or artifact is None:
+        return None
+    info = {
+        "groupId": group.text or "",
+        "artifactId": artifact.text or "",
+    }
+    version = dep.find(f"{ns}version")
+    if version is not None and version.text:
+        info["version"] = _resolve_property(
+            version.text, props
+        )
+    scope = dep.find(f"{ns}scope")
+    if scope is not None and scope.text:
+        info["scope"] = scope.text
+    return info
 
 def parse_dependencies(pom_content):
     """
@@ -176,7 +202,7 @@ def parse_dependencies(pom_content):
     :param pom_content: Строка с содержимым POM.
     :return: Список словарей с зависимостями.
     """
-    root = ET.fromstring(pom_content)
+    root = element_tree.fromstring(pom_content)
     props = _extract_properties(root)
     deps = []
     ns = MAVEN_POM_NS
@@ -184,23 +210,9 @@ def parse_dependencies(pom_content):
     if dependencies is None:
         return deps
     for dep in dependencies.findall(f"{ns}dependency"):
-        group = dep.find(f"{ns}groupId")
-        artifact = dep.find(f"{ns}artifactId")
-        version = dep.find(f"{ns}version")
-        scope = dep.find(f"{ns}scope")
-        if group is None or artifact is None:
-            continue
-        dep_info = {
-            "groupId": group.text or "",
-            "artifactId": artifact.text or "",
-        }
-        if version is not None and version.text:
-            dep_info["version"] = _resolve_property(
-                version.text, props
-            )
-        if scope is not None and scope.text:
-            dep_info["scope"] = scope.text
-        deps.append(dep_info)
+        parsed = _parse_one_dep(dep, ns, props)
+        if parsed is not None:
+            deps.append(parsed)
     return deps
 
 

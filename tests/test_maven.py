@@ -51,6 +51,8 @@ EMPTY_POM = """<?xml version="1.0"?>
   <version>1.0</version>
 </project>"""
 
+EXPECTED_DEPS_COUNT = 2
+EXPECTED_EMPTY_COUNT = 0
 
 def test_parse_package_name_full():
     """Проверка разбора полного имени пакета."""
@@ -98,7 +100,7 @@ def test_build_pom_url():
 def test_parse_dependencies():
     """Проверка парсинга зависимостей."""
     deps = parse_dependencies(SAMPLE_POM)
-    assert len(deps) == 2
+    assert len(deps) == EXPECTED_DEPS_COUNT
     assert deps[0]["artifactId"] == "junit"
     assert deps[0]["scope"] == "test"
     assert deps[1]["artifactId"] == "spring-core"
@@ -107,7 +109,7 @@ def test_parse_dependencies():
 def test_parse_dependencies_empty():
     """Проверка парсинга POM без зависимостей."""
     deps = parse_dependencies(EMPTY_POM)
-    assert len(deps) == 0
+    assert len(deps) == EXPECTED_EMPTY_COUNT
 
 
 def test_get_dependencies_from_file():
@@ -122,7 +124,7 @@ def test_get_dependencies_from_file():
         deps, version = get_dependencies(
             tmp_path, "any:any", test_mode=True
         )
-        assert len(deps) == 2
+        assert len(deps) == EXPECTED_DEPS_COUNT
         assert version == "test"
     finally:
         os.unlink(tmp_path)

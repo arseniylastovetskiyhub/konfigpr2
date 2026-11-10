@@ -68,42 +68,35 @@ def build_parser():
     parser = argparse.ArgumentParser(
         description="Визуализация графа "
                     "зависимостей Maven "
-                    "(вариант 18, этап 2)"
     )
     parser.add_argument(
         "--package",
         default=None,
         help="Имя пакета в формате "
-             "'groupId:artifactId[:version]'"
-    )
+             "'groupId:artifactId[:version]'")
     parser.add_argument(
         "--repo",
         default=None,
         help="URL репозитория или путь к "
-             "POM-файлу"
-    )
+             "POM-файлу")
     parser.add_argument(
         "--test-mode",
         action="store_true",
         help="Режим работы с тестовым "
-             "репозиторием"
-    )
+             "репозиторием")
     parser.add_argument(
         "--output-file",
         default="dependency_graph.png",
-        help="Имя файла с изображением графа"
-    )
+        help="Имя файла с изображением графа")
     parser.add_argument(
         "--ascii-tree",
         action="store_true",
         help="Вывод зависимостей в виде "
-             "ASCII-дерева"
-    )
+             "ASCII-дерева")
     parser.add_argument(
         "--filter",
         default="",
-        help="Подстрока для фильтрации пакетов"
-    )
+        help="Подстрока для фильтрации пакетов")
     return parser
 
 

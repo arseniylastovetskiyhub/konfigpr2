@@ -2,7 +2,6 @@ import pytest
 import sys
 import os
 
-"""Перед импортом модулей возвращаемся в src"""
 sys.path.insert(
     0,
     os.path.abspath(
