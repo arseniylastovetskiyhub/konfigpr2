@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 from urllib.parse import urlparse
-
+from graph import build_graph, print_graph_list, print_graph_ascii
 
 def _check_package(args, errors):
     """Проверяет корректность имени пакета."""
@@ -138,11 +138,43 @@ def print_dependencies(deps, version, filter_str):
               f"[{scope}]")
 
 
+def _make_maven_getter(repo):
+    """
+    Создаёт функцию получения зависимостей для Maven.
+    :param repo: URL репозитория.
+    :return: Функция(package) -> [имена].
+    """
+    from maven import get_dep_names_from_maven
+    
+    def getter(package):
+        return get_dep_names_from_maven(
+            repo, package
+        )
+    
+    return getter
+
+
+def _make_file_getter(file_path):
+    """
+    Создаёт функцию получения зависимостей из файла.
+    :param file_path: Путь к JSON-файлу.
+    :return: Функция(package) -> [имена].
+    """
+    from maven import get_dep_names_from_file
+    
+    def getter(package):
+        return get_dep_names_from_file(
+            file_path, package
+        )
+    
+    return getter
+
+
 def main():
     """
     Точка входа в приложение.
-    Парсит аргументы, валидирует, собирает
-    данные и выводит зависимости.
+    Парсит аргументы, валидирует, строит граф
+    и выводит зависимости.
     """
     parser = build_parser()
     args = parser.parse_args()
@@ -153,22 +185,28 @@ def main():
             print(err, file=sys.stderr)
         sys.exit(1)
     print_config(args)
-
+    
+    if args.test_mode:
+        getter = _make_file_getter(args.repo)
+    else:
+        getter = _make_maven_getter(args.repo)
+    
     try:
-        from maven import get_dependencies
-        deps, version = get_dependencies(
-            args.repo,
+        graph = build_graph(
             args.package,
-            args.test_mode
+            getter,
+            args.filter
         )
-        print_dependencies(
-            deps, version, args.filter
-        )
+        if args.ascii_tree:
+            print_graph_ascii(graph, args.package)
+        else:
+            print_graph_list(graph)
     except ValueError as e:
         print(f"Ошибка: {e}", file=sys.stderr)
         sys.exit(1)
-
-    print("\nЭтап 2 успешно завершён.")
+    
+    print(f"\nВсего пакетов в графе: {len(graph)}")
+    print("Этап 3 успешно завершён.")
 
 
 if __name__ == "__main__":

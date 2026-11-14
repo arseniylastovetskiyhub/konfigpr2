@@ -6,7 +6,7 @@ import os
 import urllib.request
 import urllib.error
 import xml.etree.ElementTree as element_tree
-
+import json
 
 MAVEN_POM_NS = "{http://maven.apache.org/POM/4.0.0}"
 MIN_PARTS = 2
@@ -260,3 +260,37 @@ def get_dependencies(repo, package, test_mode=False):
         return deps, "test"
     deps, version = _get_deps_from_url(repo, package)
     return deps, version
+
+def get_dep_names_from_file(file_path, package):
+    """
+    Возвращает имена зависимостей из JSON-файла графа.
+    :param file_path: Путь к JSON-файлу.
+    :param package: Имя пакета (большая буква).
+    :return: Список имён зависимостей.
+    """
+    if not os.path.isfile(file_path):
+        raise ValueError(
+            f"Файл графа не найден: {file_path}"
+        )
+    with open(
+        file_path, "r", encoding="utf-8"
+    ) as f:
+        graph_data = json.load(f)
+    return graph_data.get(package, [])
+
+
+def get_dep_names_from_maven(repo, package):
+    """
+    Возвращает имена зависимостей пакета Maven.
+    :param repo: URL репозитория.
+    :param package: Имя пакета в формате Maven.
+    :return: Список имён зависимостей.
+    """
+    try:
+        deps, _ = _get_deps_from_url(repo, package)
+        return [
+            f"{d['groupId']}:{d['artifactId']}"
+            for d in deps
+        ]
+    except ValueError:
+        return []
