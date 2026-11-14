@@ -20,6 +20,7 @@ from graph import (
     build_graph,
     _filter_deps,
     _get_deps_from_json,
+    find_reverse_deps,
 )
 
 SIMPLE_GRAPH = {
@@ -124,3 +125,29 @@ def test_build_graph_single_node():
     graph = build_graph("X", getter)
     assert len(graph) == 1
     assert graph["X"] == []
+
+def test_find_reverse_deps_simple():
+    """Проверка поиска обратных зависимостей."""
+    getter = _make_getter(CYCLE_GRAPH)
+    reverse = find_reverse_deps("A", getter)
+    assert "A" in reverse
+    assert "C" in reverse["A"]
+    assert "B" in reverse["C"]
+    assert "A" in reverse["B"]
+
+
+def test_find_reverse_deps_no_dependents():
+    """Проверка пакета без обратных зависимостей."""
+    getter = _make_getter(SIMPLE_GRAPH)
+    reverse = find_reverse_deps("A", getter)
+    assert "A" in reverse
+    assert reverse["A"] == []
+
+
+def test_find_reverse_deps_cycle():
+    """Проверка обратных зависимостей с циклом."""
+    getter = _make_getter(CYCLE_GRAPH)
+    reverse = find_reverse_deps("A", getter)
+    assert "A" in reverse
+    assert "C" in reverse["A"]
+    assert "B" in reverse["C"]

@@ -126,3 +126,51 @@ def print_graph_ascii(graph, start):
     )
     for line in lines:
         print(f"  {line}")
+
+def find_reverse_deps(start, get_deps_func, filter_str=""):
+    """
+    Находит обратные зависимости пакета через BFS.
+    :param start: Начальный пакет.
+    :param get_deps_func: Функция получения зависимостей.
+    :param filter_str: Подстрока для фильтрации.
+    :return: Словарь {пакет: [кто от него зависит]}.
+    """
+    direct_graph = build_graph(
+        start, get_deps_func, filter_str
+    )
+    reverse_graph = {pkg: [] for pkg in direct_graph}
+    for pkg, deps in direct_graph.items():
+        for dep in deps:
+            if dep in reverse_graph:
+                reverse_graph[dep].append(pkg)
+    result = {}
+    visited = set()
+    queue = deque([start])
+    while queue:
+        current = queue.popleft()
+        if current in visited:
+            continue
+        visited.add(current)
+        rev_deps = reverse_graph.get(current, [])
+        result[current] = rev_deps
+        for dep in rev_deps:
+            if dep not in visited:
+                queue.append(dep)
+    return result
+
+
+def print_reverse_deps(reverse_graph, start):
+    """
+    Выводит обратные зависимости на экран.
+    :param reverse_graph: Словарь обратных зависимостей.
+    :param start: Исходный пакет.
+    """
+    print(f"\nОбратные зависимости {start}:")
+    for pkg, dependents in reverse_graph.items():
+        if dependents:
+            deps_str = ", ".join(dependents)
+            print(f"  {pkg} <- {deps_str}")
+        else:
+            print(f"  {pkg} <- (никто не зависит)")
+    total = sum(len(v) for v in reverse_graph.values())
+    print(f"\nВсего обратных связей: {total}")

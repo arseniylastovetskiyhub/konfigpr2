@@ -2,7 +2,11 @@ import argparse
 import sys
 import os
 from urllib.parse import urlparse
-from graph import build_graph, print_graph_list, print_graph_ascii
+from graph import (
+    build_graph, print_graph_list,
+    print_graph_ascii, find_reverse_deps,
+    print_reverse_deps
+)
 
 def _check_package(args, errors):
     """Проверяет корректность имени пакета."""
@@ -75,8 +79,7 @@ def build_parser():
         help="Имя пакета в формате "
              "'groupId:artifactId[:version]'")
     parser.add_argument(
-        "--repo",
-        default=None,
+        "--repo", default=None,
         help="URL репозитория или путь к "
              "POM-файлу")
     parser.add_argument(
@@ -97,6 +100,10 @@ def build_parser():
         "--filter",
         default="",
         help="Подстрока для фильтрации пакетов")
+    parser.add_argument(
+        "--reverse", action="store_true",
+        help="Вывод обратных зависимостей"
+    )
     return parser
 
 
@@ -169,6 +176,27 @@ def _make_file_getter(file_path):
     
     return getter
 
+def _run_analysis(args, getter):
+    """
+    Строит и выводит граф зависимостей.
+    :param args: Namespace с аргументами.
+    :param getter: Функция получения зависимостей.
+    :return: Количество пакетов в графе.
+    """
+    if args.reverse:
+        graph = find_reverse_deps(
+            args.package, getter, args.filter
+        )
+        print_reverse_deps(graph, args.package)
+    else:
+        graph = build_graph(
+            args.package, getter, args.filter
+        )
+        if args.ascii_tree:
+            print_graph_ascii(graph, args.package)
+        else:
+            print_graph_list(graph)
+    return len(graph)
 
 def main():
     """
@@ -192,21 +220,11 @@ def main():
         getter = _make_maven_getter(args.repo)
     
     try:
-        graph = build_graph(
-            args.package,
-            getter,
-            args.filter
-        )
-        if args.ascii_tree:
-            print_graph_ascii(graph, args.package)
-        else:
-            print_graph_list(graph)
+        count = _run_analysis(args, getter)
     except ValueError as e:
         print(f"Ошибка: {e}", file=sys.stderr)
         sys.exit(1)
-    
-    print(f"\nВсего пакетов в графе: {len(graph)}")
-    print("Этап 3 успешно завершён.")
+    print(f"\nВсего пакетов в графе: {count}")
 
 
 if __name__ == "__main__":
